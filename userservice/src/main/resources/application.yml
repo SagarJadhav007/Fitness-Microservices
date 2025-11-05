@@ -1,25 +1,5 @@
 spring:
   application:
     name: user-service
-
-  datasource:
-    url: jdbc:postgresql://db.soqazjenaijirneweptz.supabase.co:5432/postgres
-    username: postgres
-    password: Sagar@2806  # encode @ → %40 if your password has special characters
-    driver-class-name: org.postgresql.Driver
-
-  jpa:
-    hibernate:
-      ddl-auto: update      # use 'none' in production
-    show-sql: true
-    properties:
-      hibernate:
-        dialect: org.hibernate.dialect.PostgreSQLDialect
-
-server:
-  port: 8081
-
-eureka:
-  client:
-    serviceUrl:
-      defaultZone: http://localhost:8761/eureka/
+  config:
+    import: optional:configserver:http://localhost:8888
