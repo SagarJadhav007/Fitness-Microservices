@@ -16,29 +16,38 @@ public class UserService {
 
     public UserResponse register(@Valid RegisterRequest request) {
 
-        if (repository.existsByEmail(request.getEmail())) {
-            throw new RuntimeException("Email already exists");
+        if (repository.existsByKeycloakId(request.getKeycloakId())) {
+            User existingUser = repository.findByKeycloakId(request.getKeycloakId());
+            return mapToResponse(existingUser);
         }
+
+        if (repository.existsByEmail(request.getEmail())) {
+            User existingUser = repository.findByEmail(request.getEmail());
+
+            if (existingUser.getKeycloakId() == null || !existingUser.getKeycloakId().equals(request.getKeycloakId())) {
+                existingUser.setKeycloakId(request.getKeycloakId());
+            }
+
+            existingUser.setFirstName(request.getFirstName());
+            existingUser.setLastName(request.getLastName());
+            existingUser.setPassword(request.getPassword());
+
+            existingUser = repository.save(existingUser);
+            return mapToResponse(existingUser);
+        }
+
 
         User user = new User();
         user.setEmail(request.getEmail());
         user.setPassword(request.getPassword());
+        user.setKeycloakId(request.getKeycloakId());
         user.setFirstName(request.getFirstName());
         user.setLastName(request.getLastName());
 
         User savedUser = repository.save(user);
-
-        UserResponse userResponse = new UserResponse();
-        userResponse.setId(savedUser.getId());
-        userResponse.setPassword(savedUser.getPassword());
-        userResponse.setEmail(savedUser.getEmail());
-        userResponse.setFirstName(savedUser.getFirstName());
-        userResponse.setLastName(savedUser.getLastName());
-        userResponse.setCreatedAt(savedUser.getCreatedAt());
-        userResponse.setUpdatedAt(savedUser.getUpdatedAt());
-
-        return userResponse;
+        return mapToResponse(savedUser);
     }
+
 
     public UserResponse getUserProfile(String userId) {
         User user = repository.findById(userId)
@@ -57,6 +66,20 @@ public class UserService {
     }
 
     public Boolean existByUserId(String userId) {
-        return repository.existsById(userId);
+        return repository.existsByKeycloakId(userId);
     }
+
+    private UserResponse mapToResponse(User user) {
+        UserResponse userResponse = new UserResponse();
+        userResponse.setId(user.getId());
+        userResponse.setKeycloakId(user.getKeycloakId());
+        userResponse.setPassword(user.getPassword());
+        userResponse.setEmail(user.getEmail());
+        userResponse.setFirstName(user.getFirstName());
+        userResponse.setLastName(user.getLastName());
+        userResponse.setCreatedAt(user.getCreatedAt());
+        userResponse.setUpdatedAt(user.getUpdatedAt());
+        return userResponse;
+    }
+
 }
