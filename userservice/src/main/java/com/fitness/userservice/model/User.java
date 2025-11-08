@@ -12,6 +12,7 @@ import java.time.LocalDateTime;
 @Table(name ="users")
 @Data
 public class User {
+
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private String id;
@@ -23,16 +24,29 @@ public class User {
 
     @Column(nullable = false)
     private String password;
+
     private String firstName;
     private String lastName;
 
     @Enumerated(EnumType.STRING)
     private UserRole role = UserRole.USER;
 
+    // -----------------------------
+    // FITNESS GOALS
+    // -----------------------------
+    private Integer dailyCaloriesGoal;             // e.g., 500
+    private Integer weeklyWorkoutMinutesGoal;      // e.g., 150
+    private Double targetWeight;                   // optional
+
+    @Enumerated(EnumType.STRING)
+    private PlanType planType;  // BEGINNER, WEIGHT_LOSS, ENDURANCE, MUSCLE_GAIN, GENERAL
+
+    // Stores the ID of the active workout plan
+    private String activePlanId;
+
     @CreationTimestamp
     private LocalDateTime createdAt;
 
     @UpdateTimestamp
     private LocalDateTime updatedAt;
-
 }

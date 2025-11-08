@@ -14,6 +14,11 @@ spring:
           predicates:
             - Path=/api/users/**
 
+        - id: user-workout-plans
+          uri: lb://USER-SERVICE
+          predicates:
+            - Path=/api/plans/**
+
         - id: activity-service
           uri: lb://ACTIVITY-SERVICE
           predicates:
