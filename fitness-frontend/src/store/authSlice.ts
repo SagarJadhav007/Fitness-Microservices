@@ -1,15 +1,15 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 
-export type User = { sub?: string; [key: string]: any } | null;
+export type User = { sub?: string; [key: string]: any };   // ✅ remove null
 
 interface AuthState {
-  user: User;
+  user: User | null;   // ✅ state can still store null
   token: string | null;
   userId: string | null;
 }
 
 const storedUser = localStorage.getItem("user");
-const initialUser: User = storedUser ? JSON.parse(storedUser) : null;
+const initialUser: User | null = storedUser ? JSON.parse(storedUser) : null;
 const initialToken = localStorage.getItem("token");
 const initialUserId = localStorage.getItem("userId");
 
@@ -25,7 +25,7 @@ const authSlice = createSlice({
   reducers: {
     setCredentials: (
       state,
-      action: PayloadAction<{ user: NonNullable<User>; token: string }>
+      action: PayloadAction<{ user: User; token: string }>   // ✅ no NonNullable
     ) => {
       state.user = action.payload.user;
       state.token = action.payload.token;
@@ -33,12 +33,14 @@ const authSlice = createSlice({
 
       localStorage.setItem("token", action.payload.token);
       localStorage.setItem("user", JSON.stringify(action.payload.user));
+
       if (action.payload.user.sub) {
         localStorage.setItem("userId", action.payload.user.sub);
       } else {
         localStorage.removeItem("userId");
       }
     },
+
     logout: (state) => {
       state.user = null;
       state.token = null;
