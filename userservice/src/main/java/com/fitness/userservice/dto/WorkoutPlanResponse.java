@@ -1,5 +1,6 @@
 package com.fitness.userservice.dto;
 
+import com.fitness.userservice.model.PlanType;
 import lombok.Data;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -14,7 +15,7 @@ public class WorkoutPlanResponse {
 
     private Integer durationInWeeks;
     private Integer targetCalories;
-    private String planType;
+    private PlanType planType;
 
     private Boolean isActive;
 

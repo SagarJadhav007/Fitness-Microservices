@@ -4,10 +4,15 @@ spring:
     username: postgres
     password: Sagar@2806  # encode @ → %40 if your password has special characters
     driver-class-name: org.postgresql.Driver
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: guest
+    password: guest
 
   jpa:
     hibernate:
-      ddl-auto: update      # use 'none' in production
+      ddl-auto: update
     show-sql: true
     properties:
       hibernate:
@@ -20,3 +25,11 @@ eureka:
   client:
     serviceUrl:
       defaultZone: http://localhost:8761/eureka/
+
+rabbitmq:
+  exchange:
+    name: fitness.exchange
+  queue:
+    name: goals.queue
+  routing:
+    key: goals

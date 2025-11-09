@@ -1,6 +1,5 @@
 package com.fitness.aiservice.config;
 
-
 import org.springframework.amqp.core.Binding;
 import org.springframework.amqp.core.BindingBuilder;
 import org.springframework.amqp.core.DirectExchange;
@@ -10,27 +9,36 @@ import org.springframework.amqp.support.converter.MessageConverter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-
 @Configuration
 public class RabbitMqConfig {
 
     @Bean
-    public Queue activityQueue(){
+    public Queue activityQueue() {
         return new Queue("activity.queue", true);
     }
 
     @Bean
-    public DirectExchange activityExchange(){
-        return new DirectExchange("fitness.exchange");
-    }
-    
-    @Bean
-    public Binding activityBinding(Queue activityQueue, DirectExchange activityExchange){
-        return BindingBuilder.bind(activityQueue).to(activityExchange).with("activity.tracking");
+    public Queue goalsQueue() {
+        return new Queue("goals.queue", true);
     }
 
     @Bean
-    public MessageConverter jsonMessageConverter(){
+    public DirectExchange fitnessExchange() {
+        return new DirectExchange("fitness.exchange");
+    }
+
+    @Bean
+    public Binding activityBinding(Queue activityQueue, DirectExchange fitnessExchange) {
+        return BindingBuilder.bind(activityQueue).to(fitnessExchange).with("activity.tracking");
+    }
+
+    @Bean
+    public Binding goalsBinding(Queue goalsQueue, DirectExchange fitnessExchange) {
+        return BindingBuilder.bind(goalsQueue).to(fitnessExchange).with("goals");
+    }
+
+    @Bean
+    public MessageConverter jsonMessageConverter() {
         return new Jackson2JsonMessageConverter();
     }
 }

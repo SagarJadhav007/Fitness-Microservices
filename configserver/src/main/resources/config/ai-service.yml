@@ -20,10 +20,14 @@ eureka:
 rabbitmq:
   exchange:
     name: fitness.exchange
-  queue:
-    name: activity.queue
-  routing:
-    key: activity.tracking
+
+  activity:
+    queue: activity.queue
+    routingKey: activity.tracking
+
+  goals:
+    queue: goals.queue
+    routingKey: goals
 
 gemini:
   api:

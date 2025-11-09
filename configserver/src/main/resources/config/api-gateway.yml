@@ -29,6 +29,11 @@ spring:
           predicates:
             - Path=/api/recommendations/**
 
+        - id: ai-service-workout
+          uri: lb://AI-SERVICE
+          predicates:
+            - Path=/api/ai/plans/**
+
 server:
   port: 8080
 

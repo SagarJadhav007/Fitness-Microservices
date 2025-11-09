@@ -1,5 +1,6 @@
 package com.fitness.userservice.dto;
 
+import com.fitness.userservice.model.PlanType;
 import lombok.Data;
 import java.util.List;
 
@@ -12,7 +13,7 @@ public class CreateWorkoutPlanRequest {
     private Integer durationInWeeks;
     private Integer targetCalories;
 
-    private String planType; // or PlanType enum if you want
+    private PlanType planType; // or PlanType enum if you want
 
     private List<PlanDayRequest> days;
 }

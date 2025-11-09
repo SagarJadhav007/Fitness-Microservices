@@ -1,6 +1,6 @@
 package com.fitness.userservice.controller;
 
-import com.fitness.userservice.dto.CreateWorkoutPlanRequest;
+import com.fitness.userservice.dto.SaveWorkoutPlanRequest;
 import com.fitness.userservice.dto.WorkoutPlanResponse;
 import com.fitness.userservice.service.WorkoutPlanService;
 import lombok.AllArgsConstructor;
@@ -17,11 +17,11 @@ public class WorkoutPlanController {
     private final WorkoutPlanService service;
 
     @PostMapping("/{userId}")
-    public ResponseEntity<WorkoutPlanResponse> createPlan(
+    public ResponseEntity<WorkoutPlanResponse> savePlan(
             @PathVariable String userId,
-            @RequestBody CreateWorkoutPlanRequest request
+            @RequestBody SaveWorkoutPlanRequest request
     ) {
-        return ResponseEntity.ok(service.createPlan(userId, request));
+        return ResponseEntity.ok(service.savePlan(userId, request));
     }
 
     @GetMapping("/{userId}")
@@ -34,4 +34,3 @@ public class WorkoutPlanController {
         return ResponseEntity.ok(service.getPlan(planId));
     }
 }
-
