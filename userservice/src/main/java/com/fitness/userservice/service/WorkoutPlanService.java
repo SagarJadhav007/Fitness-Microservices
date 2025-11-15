@@ -100,4 +100,12 @@ public class WorkoutPlanService {
         resp.setDays(dayResponses);
         return resp;
     }
+
+    public WorkoutPlanResponse getActivePlan(String userId) {
+        WorkoutPlan plan = planRepository.findByUserIdAndIsActive(userId, true)
+                .orElseThrow(() -> new RuntimeException("No active plan found"));
+
+        return buildPlanResponse(plan);
+    }
+
 }

@@ -1,6 +1,7 @@
 package com.example.activityservice.service;
 
 import com.example.activityservice.ActivityRepository;
+import com.example.activityservice.dto.ActivityLogMessage;
 import com.example.activityservice.dto.ActivityRequest;
 import com.example.activityservice.dto.ActivityResponse;
 import com.example.activityservice.model.Activity;
@@ -10,6 +11,7 @@ import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.time.ZoneId;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -48,10 +50,20 @@ public class ActivityService {
         Activity savedActivity = activityRepository.save(activity);
 
         //RabbitMQ
-        try{
-            rabbitTemplate.convertAndSend(exchange,routingKey,savedActivity);
-        } catch(Exception e){
-            log.error("Failed to publish activity to RabbitMq: ", e);
+        try {
+            ActivityLogMessage msg = new ActivityLogMessage();
+            msg.setUserId(savedActivity.getUserId());
+            msg.setActivityType(savedActivity.getType().name());
+            msg.setDurationMinutes(savedActivity.getDuration());
+            msg.setCaloriesBurned(savedActivity.getCaloriesBurned());
+            msg.setTimestamp(savedActivity.getStartTime().atZone(ZoneId.systemDefault()).toInstant().toEpochMilli());
+
+            rabbitTemplate.convertAndSend(exchange, routingKey, msg);
+
+            log.info("Published activity event to RabbitMQ for user {}", savedActivity.getUserId());
+
+        } catch (Exception e) {
+            log.error("Failed to publish activity to RabbitMQ: ", e);
         }
         return mapToResponse(savedActivity);
     }

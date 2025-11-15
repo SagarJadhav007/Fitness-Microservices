@@ -33,4 +33,10 @@ public class WorkoutPlanController {
     public ResponseEntity<WorkoutPlanResponse> getPlan(@PathVariable String planId) {
         return ResponseEntity.ok(service.getPlan(planId));
     }
+
+    @GetMapping("/active/{userId}")
+    public ResponseEntity<WorkoutPlanResponse> getActivePlan(@PathVariable String userId) {
+        return ResponseEntity.ok(service.getActivePlan(userId));
+    }
+
 }
