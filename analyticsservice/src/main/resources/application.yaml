@@ -1,0 +1,39 @@
+spring:
+  application:
+    name: analytics-service
+
+  datasource:
+    url: jdbc:postgresql://hrmwab53uf.wtu5z8efxe.tsdb.cloud.timescale.com:39737/tsdb?sslmode=require
+    username: tsdbadmin
+    password: ey2kxbvsqj2aw8ip
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: guest
+    password: guest
+
+server:
+  port: 8084
+
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: http://localhost:8761/eureka/
+
+rabbitmq:
+  exchange:
+    name: fitness.exchange
+  queue:
+    name: analysis.queue
+  routing:
+    key: analysis
