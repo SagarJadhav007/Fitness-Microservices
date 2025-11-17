@@ -10,8 +10,13 @@ import org.springframework.context.annotation.Configuration;
 public class RabbitMqConfig {
 
     public static final String EXCHANGE_NAME = "fitness.exchange";
+
+    // Existing queue for per-activity analytics
     public static final String ANALYTICS_QUEUE = "analytics.queue";
     public static final String ROUTING_KEY = "activity.tracking";
+
+    // NEW DAILY SUMMARY ROUTING
+    public static final String DAILY_ROUTING_KEY = "daily.summary";
 
     @Bean
     public DirectExchange activityExchange() {
@@ -36,3 +41,4 @@ public class RabbitMqConfig {
         return new Jackson2JsonMessageConverter();
     }
 }
+
