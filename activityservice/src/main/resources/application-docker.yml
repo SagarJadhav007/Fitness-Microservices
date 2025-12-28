@@ -1,0 +1,39 @@
+spring:
+  application:
+    name: activity-service
+  config:
+    import: optional:configserver:${CONFIG_SERVER_URL:http://config-server:8888}
+  data:
+    mongodb:
+      uri: mongodb://${MONGODB_USER:admin}:${MONGODB_PASSWORD:password}@${MONGODB_HOST:mongodb}:${MONGODB_PORT:27017}/${MONGODB_DATABASE:activitydb}?authSource=admin
+      database: ${MONGODB_DATABASE:activitydb}
+  rabbitmq:
+    host: ${RABBITMQ_HOST:rabbitmq}
+    port: 5672
+    username: guest
+    password: guest
+
+server:
+  port: 8082
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_SERVER_URL:http://eureka-server:8761/eureka/}
+  instance:
+    prefer-ip-address: true
+    hostname: activity-service
+
+rabbitmq:
+  exchange:
+    name: fitness.exchange
+  queue:
+    name: activity.queue
+  routing:
+    key: activity.tracking
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info

@@ -1,0 +1,36 @@
+spring:
+  application:
+    name: ai-service
+  config:
+    import: optional:configserver:${CONFIG_SERVER_URL:http://config-server:8888}
+  data:
+    mongodb:
+      uri: mongodb://${MONGODB_USER:admin}:${MONGODB_PASSWORD:password}@${MONGODB_HOST:mongodb}:${MONGODB_PORT:27017}/${MONGODB_DATABASE:aiservicedb}?authSource=admin
+      database: ${MONGODB_DATABASE:aiservicedb}
+  rabbitmq:
+    host: ${RABBITMQ_HOST:rabbitmq}
+    port: 5672
+    username: guest
+    password: guest
+
+server:
+  port: 8083
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_SERVER_URL:http://eureka-server:8761/eureka/}
+  instance:
+    prefer-ip-address: true
+    hostname: ai-service
+
+gemini:
+  api:
+    url: ${GEMINI_API_URL}
+    key: ${GEMINI_API_KEY}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info

@@ -1,0 +1,328 @@
+version: '3.8'
+
+services:
+  # ========================================
+  # INFRASTRUCTURE SERVICES
+  # ========================================
+
+  # MongoDB for Activity & AI Services
+  mongodb:
+    image: mongo:7.0
+    container_name: mongodb-fitness
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: password
+    volumes:
+      - mongodb_data:/data/db
+      - ./init-mongo.js:/docker-entrypoint-initdb.d/init-mongo.js:ro
+    networks:
+      - fitness-network
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # PostgreSQL for User & Analytics Services
+  postgres:
+    image: postgres:15-alpine
+    container_name: postgres-fitness
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-postgres.sql:/docker-entrypoint-initdb.d/init-postgres.sql:ro
+    networks:
+      - fitness-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # RabbitMQ Message Broker
+  rabbitmq:
+    image: rabbitmq:3.12-management-alpine
+    container_name: rabbitmq-fitness
+    restart: unless-stopped
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - fitness-network
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # ========================================
+  # SPRING CLOUD INFRASTRUCTURE
+  # ========================================
+
+  # Config Server (must start first)
+  config-server:
+    build:
+      context: ./configserver
+      dockerfile: Dockerfile
+    container_name: config-server
+    ports:
+      - "8888:8888"
+    networks:
+      - fitness-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8888/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
+
+  # Eureka Server (starts after config-server)
+  eureka-server:
+    build:
+      context: ./eureka
+      dockerfile: Dockerfile
+    container_name: eureka-server
+    ports:
+      - "8761:8761"
+    networks:
+      - fitness-network
+    depends_on:
+      config-server:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8761/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
+
+  # ========================================
+  # MICROSERVICES
+  # ========================================
+
+  # User Service
+  user-service:
+    build:
+      context: ./userservice
+      dockerfile: Dockerfile
+    container_name: user-service
+    ports:
+      - "8081:8081"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      CONFIG_SERVER_URL: http://config-server:8888
+      EUREKA_SERVER_URL: http://eureka-server:8761/eureka/
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: userservicedb
+      DB_USER: postgres
+      DB_PASSWORD: password
+      RABBITMQ_HOST: rabbitmq
+    networks:
+      - fitness-network
+    depends_on:
+      config-server:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    restart: on-failure
+
+  # Activity Service
+  activity-service:
+    build:
+      context: ./activityservice
+      dockerfile: Dockerfile
+    container_name: activity-service
+    ports:
+      - "8082:8082"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      CONFIG_SERVER_URL: http://config-server:8888
+      EUREKA_SERVER_URL: http://eureka-server:8761/eureka/
+      MONGODB_HOST: mongodb
+      MONGODB_PORT: 27017
+      MONGODB_DATABASE: activitydb
+      MONGODB_USER: admin
+      MONGODB_PASSWORD: password
+      RABBITMQ_HOST: rabbitmq
+    networks:
+      - fitness-network
+    depends_on:
+      config-server:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      user-service:
+        condition: service_started
+    restart: on-failure
+
+  # AI Service
+  ai-service:
+    build:
+      context: ./aiservice
+      dockerfile: Dockerfile
+    container_name: ai-service
+    ports:
+      - "8083:8083"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      CONFIG_SERVER_URL: http://config-server:8888
+      EUREKA_SERVER_URL: http://eureka-server:8761/eureka/
+      MONGODB_HOST: mongodb
+      MONGODB_PORT: 27017
+      MONGODB_DATABASE: aiservicedb
+      MONGODB_USER: admin
+      MONGODB_PASSWORD: password
+      RABBITMQ_HOST: rabbitmq
+      GEMINI_API_URL: ${GEMINI_API_URL}
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+    networks:
+      - fitness-network
+    depends_on:
+      config-server:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    restart: on-failure
+
+  # Analytics Service
+  analytics-service:
+    build:
+      context: ./analyticsservice
+      dockerfile: Dockerfile
+    container_name: analytics-service
+    ports:
+      - "8084:8084"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      CONFIG_SERVER_URL: http://config-server:8888
+      EUREKA_SERVER_URL: http://eureka-server:8761/eureka/
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: analyticsdb
+      DB_USER: postgres
+      DB_PASSWORD: password
+      RABBITMQ_HOST: rabbitmq
+    networks:
+      - fitness-network
+    depends_on:
+      config-server:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      user-service:
+        condition: service_started
+    restart: on-failure
+
+  # API Gateway
+  api-gateway:
+    build:
+      context: ./gateway
+      dockerfile: Dockerfile
+    container_name: api-gateway
+    ports:
+      - "8089:8089"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      CONFIG_SERVER_URL: http://config-server:8888
+      EUREKA_SERVER_URL: http://eureka-server:8761/eureka/
+    networks:
+      - fitness-network
+    depends_on:
+      config-server:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+      user-service:
+        condition: service_started
+      activity-service:
+        condition: service_started
+      ai-service:
+        condition: service_started
+    restart: on-failure
+
+  # ========================================
+  # OPTIONAL: MANAGEMENT UIs
+  # ========================================
+
+  # MongoDB Web UI
+  mongo-express:
+    image: mongo-express:latest
+    container_name: mongo-express-fitness
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: admin
+      ME_CONFIG_MONGODB_ADMINPASSWORD: password
+      ME_CONFIG_MONGODB_URL: mongodb://admin:password@mongodb:27017/
+      ME_CONFIG_BASICAUTH: false
+    depends_on:
+      - mongodb
+    networks:
+      - fitness-network
+    profiles:
+      - monitoring
+
+  # PostgreSQL Web UI
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: pgadmin-fitness
+    restart: unless-stopped
+    ports:
+      - "5050:80"
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@fitness.com
+      PGADMIN_DEFAULT_PASSWORD: password
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    depends_on:
+      - postgres
+    networks:
+      - fitness-network
+    profiles:
+      - monitoring
+
+networks:
+  fitness-network:
+    driver: bridge
+
+volumes:
+  mongodb_data:
+    driver: local
+  postgres_data:
+    driver: local
+  rabbitmq_data:
+    driver: local
+  pgadmin_data:
+    driver: local
