@@ -1,14 +1,15 @@
 spring:
   datasource:
-    url: jdbc:postgresql://db.soqazjenaijirneweptz.supabase.co:5432/postgres
-    username: postgres
-    password: Sagar@2806  # encode @ → %40 if your password has special characters
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:userservicedb}
+    username: ${DB_USER:postgres}
+    password: ${DB_PASSWORD:password}
     driver-class-name: org.postgresql.Driver
+
   rabbitmq:
-    host: localhost
-    port: 5672
-    username: guest
-    password: guest
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USER:guest}
+    password: ${RABBITMQ_PASSWORD:guest}
 
   jpa:
     hibernate:
@@ -23,8 +24,8 @@ server:
 
 eureka:
   client:
-    serviceUrl:
-      defaultZone: http://localhost:8761/eureka/
+    service-url:
+      defaultZone: ${EUREKA_SERVER_URL:http://localhost:8761/eureka/}
 
 rabbitmq:
   exchange:

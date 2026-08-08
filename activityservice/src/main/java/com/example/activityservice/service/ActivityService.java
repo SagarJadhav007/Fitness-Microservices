@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.time.LocalDateTime;
 
 @Service
 @RequiredArgsConstructor
@@ -43,7 +44,11 @@ public class ActivityService {
                 .type(request.getType())
                 .duration(request.getDuration())
                 .caloriesBurned(request.getCaloriesBurned())
-                .startTime(request.getStartTime())
+                .startTime(
+                        request.getStartTime() != null
+                                ? request.getStartTime()
+                                : LocalDateTime.now()
+                )
                 .additionalMetrics(request.getAdditionalMetrics())
                 .build();
 

@@ -1,11 +1,13 @@
 spring:
   application:
     name: api-gateway
+
   security:
     oauth2:
       resourceserver:
         jwt:
-          jwk-set-uri: http://localhost:8181/realms/fitness-oauth2/protocol/openid-connect/certs
+          jwk-set-uri: ${KEYCLOAK_JWK_URI:http://localhost:8181/realms/fitness-oauth2/protocol/openid-connect/certs}
+
   cloud:
     gateway:
       routes:
@@ -39,5 +41,5 @@ server:
 
 eureka:
   client:
-    serviceUrl:
-      defaultZone: http://localhost:8761/eureka/
+    service-url:
+      defaultZone: ${EUREKA_SERVER_URL:http://localhost:8761/eureka/}
