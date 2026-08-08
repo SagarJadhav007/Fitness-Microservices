@@ -85,8 +85,10 @@ pipeline {
 
     post {
         always {
-            junit 'activityservice/target/surefire-reports/*.xml',
-            allowEmptyResults: true
+            junit(
+               testResults: 'activityservice/target/surefire-reports/*.xml',
+               allowEmptyResults: true
+            )
         }
 
         success {
