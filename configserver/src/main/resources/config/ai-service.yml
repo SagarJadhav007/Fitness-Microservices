@@ -1,14 +1,16 @@
 spring:
   data:
     mongodb:
-      uri: mongodb://${MONGODB_USER:admin}:${MONGODB_PASSWORD:password}@${MONGODB_HOST:localhost}:${MONGODB_PORT:27017}/${MONGODB_DATABASE:activitydb}?authSource=admin
+      uri: ${MONGODB_URI}
       database: ${MONGODB_DATABASE:activitydb}
 
-    rabbitmq:
-      host: ${RABBITMQ_HOST:localhost}
-      port: ${RABBITMQ_PORT:5672}
-      username: guest
-      password: guest
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5671}
+    username: ${RABBITMQ_USER:guest}
+    password: ${RABBITMQ_PASSWORD:guest}
+    ssl:
+      enabled: ${RABBITMQ_SSL:false}
 
 server:
   port: 8083
@@ -22,13 +24,13 @@ rabbitmq:
   exchange:
     name: fitness.exchange
 
-  activity:
-    queue: activity.queue
-    routingKey: activity.tracking
+activity:
+  queue: activity.queue
+  routingKey: activity.tracking
 
-  goals:
-    queue: goals.queue
-    routingKey: goals
+goals:
+  queue: goals.queue
+  routingKey: goals
 
 gemini:
   api:

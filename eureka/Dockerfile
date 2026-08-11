@@ -24,7 +24,7 @@ USER spring:spring
 COPY --from=build /app/target/*.jar app.jar
 
 # Expose port (will be overridden by docker-compose)
-EXPOSE 8080
+EXPOSE 8761
 
 # Add health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=60s --retries=3 \
