@@ -1,13 +1,16 @@
 spring:
   application:
     name: user-service
+
   config:
-    import: optional:configserver:${CONFIG_SERVER_URL:http://config-server:8888}
+    import: optional:configserver:${CONFIG_SERVER_URL:http://configserver:8888}
+
   datasource:
-    url: jdbc:postgresql://localhost:5432/fitnessdb
-    username: fitness
-    password: fitness123
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:fitnessdb}
+    username: ${DB_USER:fitness}
+    password: ${DB_PASSWORD:fitness123}
     driver-class-name: org.postgresql.Driver
+
   jpa:
     hibernate:
       ddl-auto: update
@@ -15,22 +18,17 @@ spring:
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
+
   rabbitmq:
     host: ${RABBITMQ_HOST:rabbitmq}
-    port: 5672
-    username: guest
-    password: guest
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USER:guest}
+    password: ${RABBITMQ_PASSWORD:guest}
+    ssl:
+      enabled: ${RABBITMQ_SSL:false}
 
 server:
   port: 8081
-
-eureka:
-  client:
-    service-url:
-      defaultZone: ${EUREKA_SERVER_URL:http://eureka-server:8761/eureka/}
-  instance:
-    prefer-ip-address: true
-    hostname: user-service
 
 management:
   endpoints:

@@ -1,0 +1,86 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: activityservice
+  namespace: fitx
+
+spec:
+  replicas: 1
+
+  selector:
+    matchLabels:
+      app: activityservice
+
+  template:
+    metadata:
+      labels:
+        app: activityservice
+
+    spec:
+      containers:
+        - name: activityservice
+          image: 020641930163.dkr.ecr.ap-south-1.amazonaws.com/fitx/activityservice:v2
+
+          ports:
+            - containerPort: 8082
+
+          envFrom:
+            - secretRef:
+                name: fitx-backend-secrets
+
+            - secretRef:
+                name: fitx-mongodb-secret
+
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: "docker"
+
+            - name: CONFIG_SERVER_URL
+              value: "http://configserver:8888"
+
+            - name: EUREKA_CLIENT_ENABLED
+              value: "false"
+
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+
+            limits:
+              cpu: 500m
+              memory: 512Mi
+
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8082
+            initialDelaySeconds: 40
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 6
+
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8082
+            initialDelaySeconds: 60
+            periodSeconds: 20
+            timeoutSeconds: 3
+            failureThreshold: 3
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: activityservice
+  namespace: fitx
+
+spec:
+  type: ClusterIP
+
+  selector:
+    app: activityservice
+
+  ports:
+    - port: 8082
+      targetPort: 8082

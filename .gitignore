@@ -124,4 +124,5 @@ yarn-error.log*
 *.temp
 *.swp
 *.swo
-*~
+*~k8s/keycloak/secret.yaml
+k8s/keycloak/secret.yaml

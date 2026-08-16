@@ -1,0 +1,89 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aiservice
+  namespace: fitx
+
+spec:
+  replicas: 1
+
+  selector:
+    matchLabels:
+      app: aiservice
+
+  template:
+    metadata:
+      labels:
+        app: aiservice
+
+    spec:
+      containers:
+        - name: aiservice
+          image: 020641930163.dkr.ecr.ap-south-1.amazonaws.com/fitx/aiservice:v2
+
+          ports:
+            - containerPort: 8083
+
+          envFrom:
+            - secretRef:
+                name: fitx-backend-secrets
+
+            - secretRef:
+                name: fitx-mongodb-secret
+
+            - secretRef:
+                name: fitx-ai-secret
+
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: "docker"
+
+            - name: CONFIG_SERVER_URL
+              value: "http://configserver:8888"
+
+            - name: EUREKA_CLIENT_ENABLED
+              value: "false"
+
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+
+            limits:
+              cpu: 500m
+              memory: 512Mi
+
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8083
+            initialDelaySeconds: 40
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 6
+
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8083
+            initialDelaySeconds: 60
+            periodSeconds: 20
+            timeoutSeconds: 3
+            failureThreshold: 3
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: aiservice
+  namespace: fitx
+
+spec:
+  type: ClusterIP
+
+  selector:
+    app: aiservice
+
+  ports:
+    - port: 8083
+      targetPort: 8083

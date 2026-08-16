@@ -2,11 +2,11 @@ package com.fitness.gateway;
 
 import com.fitness.gateway.user.RegisterRequest;
 import com.fitness.gateway.user.UserService;
-import com.nimbusds.jwt.JWTClaimsSet;
-import com.nimbusds.jwt.SignedJWT;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.server.reactive.ServerHttpRequest;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ServerWebExchange;
 import org.springframework.web.server.WebFilter;
@@ -17,66 +17,106 @@ import reactor.core.publisher.Mono;
 @Slf4j
 @RequiredArgsConstructor
 public class KeycloakUserSyncFilter implements WebFilter {
+
     private final UserService userService;
 
     @Override
-    public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain){
-        String userId = exchange.getRequest().getHeaders().getFirst("X-User-ID");
-        String token = exchange.getRequest().getHeaders().getFirst("Authorization");
-        RegisterRequest registerRequest = getUserDetails(token);
+    public Mono<Void> filter(
+            ServerWebExchange exchange,
+            WebFilterChain chain) {
 
-        if(userId == null){
-            userId = registerRequest.getKeycloakId();
-        }
+        return exchange.getPrincipal()
+                .cast(Authentication.class)
+                .flatMap(authentication -> {
 
-        if (userId != null && token !=null){
-            String finaluserId = userId;
-            return userService.validateUser(userId)
-                    .flatMap(exist ->{
-                        if(!exist){
-                            // Register user
-                            if(registerRequest != null){
-                                return userService.registerUser(registerRequest)
-                                        .then(Mono.empty());
-                            }
-                            else {
-                                return Mono.empty();
-                            }
-                        } else{
-                            log.info("User Already exist skipping sync.");
-                            return Mono.empty();
-                        }
-                    })
-                    .then(Mono.defer(()->{
-                        ServerHttpRequest mutatedRequest = exchange.getRequest()
-                                .mutate()
-                                .header("X-User-ID",finaluserId)
-                                .build();
+                    if (!(authentication.getPrincipal() instanceof Jwt jwt)) {
+                        log.warn("Authenticated principal is not a JWT");
+                        return chain.filter(exchange);
+                    }
 
-                        return chain.filter(exchange.mutate().request(mutatedRequest).build());
-                    }));
-        }
-        return chain.filter(exchange);
+                    String keycloakId = jwt.getSubject();
+
+                    if (keycloakId == null || keycloakId.isBlank()) {
+                        log.warn("JWT does not contain subject");
+                        return chain.filter(exchange);
+                    }
+
+                    log.info("Processing Keycloak user: {}", keycloakId);
+
+                    return userService.validateUser(keycloakId)
+                            .flatMap(exists -> {
+
+                                if (Boolean.TRUE.equals(exists)) {
+                                    log.info(
+                                            "User {} already exists. Skipping registration.",
+                                            keycloakId
+                                    );
+
+                                    return continueRequest(
+                                            exchange,
+                                            chain,
+                                            keycloakId
+                                    );
+                                }
+
+                                log.info(
+                                        "User {} does not exist. Registering...",
+                                        keycloakId
+                                );
+
+                                RegisterRequest request =
+                                        buildRegisterRequest(jwt);
+
+                                return userService
+                                        .registerUser(request)
+                                        .doOnSuccess(user ->
+                                                log.info(
+                                                        "User {} registered successfully.",
+                                                        keycloakId
+                                                )
+                                        )
+                                        .then(
+                                                continueRequest(
+                                                        exchange,
+                                                        chain,
+                                                        keycloakId
+                                                )
+                                        );
+                            });
+                })
+                .switchIfEmpty(chain.filter(exchange));
     }
 
-    private RegisterRequest getUserDetails(String token) {
-        try{
-            String tokenWithoutBearer = token.replace("Bearer ","").trim();
-            SignedJWT signedJWT = SignedJWT.parse(tokenWithoutBearer);
-            JWTClaimsSet claims = signedJWT.getJWTClaimsSet();
+    private Mono<Void> continueRequest(
+            ServerWebExchange exchange,
+            WebFilterChain chain,
+            String userId) {
 
-            RegisterRequest registerRequest = new RegisterRequest();
-            registerRequest.setEmail(claims.getStringClaim("email"));
-            registerRequest.setKeycloakId(claims.getStringClaim("sub"));
-            registerRequest.setPassword("dummy@123123");
-            registerRequest.setFirstName(claims.getStringClaim("given_name"));
-            registerRequest.setLastName(claims.getStringClaim("family_name"));
+        ServerHttpRequest mutatedRequest =
+                exchange.getRequest()
+                        .mutate()
+                        .header("X-User-ID", userId)
+                        .build();
 
-            return registerRequest;
+        return chain.filter(
+                exchange.mutate()
+                        .request(mutatedRequest)
+                        .build()
+        );
+    }
 
-        } catch(Exception e){
-            e.printStackTrace();
-            return null;
-        }
+    private RegisterRequest buildRegisterRequest(Jwt jwt) {
+
+        RegisterRequest request = new RegisterRequest();
+
+        request.setKeycloakId(jwt.getSubject());
+        request.setEmail(jwt.getClaimAsString("email"));
+        request.setFirstName(jwt.getClaimAsString("given_name"));
+        request.setLastName(jwt.getClaimAsString("family_name"));
+
+        // Not actually used by userservice.register()
+        request.setPassword("dummy@123123");
+
+        return request;
     }
 }

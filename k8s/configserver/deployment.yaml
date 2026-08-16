@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: configserver
-          image: 020641930163.dkr.ecr.ap-south-1.amazonaws.com/fitx/configserver:v1
+          image: 020641930163.dkr.ecr.ap-south-1.amazonaws.com/fitx/configserver:v2
           ports:
             - containerPort: 8888
           resources:

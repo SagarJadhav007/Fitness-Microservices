@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams } from 'react-router';
 import { getActivityDetail } from '../services/api';
 import { Box, Card, CardContent, Divider, Typography } from '@mui/material';

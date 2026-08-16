@@ -1,0 +1,137 @@
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: keycloak
+  namespace: fitx
+
+spec:
+  replicas: 1
+
+  strategy:
+    type: Recreate
+
+  selector:
+    matchLabels:
+      app: keycloak
+
+  template:
+    metadata:
+      labels:
+        app: keycloak
+
+    spec:
+      containers:
+        - name: keycloak
+
+          image: quay.io/keycloak/keycloak:26.3
+
+          args:
+            - start
+
+          ports:
+            - name: http
+              containerPort: 8080
+
+            - name: management
+              containerPort: 9000
+
+          env:
+
+            # ------------------------------------------------
+            # Keycloak admin
+            # ------------------------------------------------
+
+            - name: KC_BOOTSTRAP_ADMIN_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak-secret
+                  key: KEYCLOAK_ADMIN
+
+            - name: KC_BOOTSTRAP_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak-secret
+                  key: KEYCLOAK_ADMIN_PASSWORD
+
+            # ------------------------------------------------
+            # PostgreSQL / RDS
+            # ------------------------------------------------
+
+            - name: KC_DB
+              value: "postgres"
+
+            - name: KC_DB_URL
+              value: "jdbc:postgresql://fitx-postgres.c5aauw822s5x.ap-south-1.rds.amazonaws.com:5432/fitxdb"
+
+            - name: KC_DB_SCHEMA
+              value: "keycloak"
+
+            - name: KC_DB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak-secret
+                  key: KC_DB_USERNAME
+
+            - name: KC_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak-secret
+                  key: KC_DB_PASSWORD
+
+            # HTTP
+            - name: KC_HTTP_ENABLED
+              value: "true"
+
+            # Health endpoints
+            - name: KC_HEALTH_ENABLED
+              value: "true"
+
+            # Cloudflare Tunnel / reverse proxy
+            - name: KC_PROXY_HEADERS
+              value: "xforwarded"
+
+            - name: KC_HOSTNAME
+              value: "https://accessing-somehow-doctrine-comm.trycloudflare.com"
+
+            - name: KC_HOSTNAME_STRICT
+              value: "true"
+
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+
+            limits:
+              cpu: 500m
+              memory: 768Mi
+
+          startupProbe:
+            httpGet:
+              path: /health/ready
+              port: 9000
+
+            initialDelaySeconds: 60
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 60
+
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: 9000
+
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 6
+
+          livenessProbe:
+            httpGet:
+              path: /health/live
+              port: 9000
+
+            initialDelaySeconds: 120
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 3

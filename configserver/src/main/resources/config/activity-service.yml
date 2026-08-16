@@ -5,22 +5,15 @@ spring:
       database: ${MONGODB_DATABASE:activitydb}
 
   rabbitmq:
-    host: ${RABBITMQ_HOST:localhost}
+    host: ${RABBITMQ_HOST}
     port: ${RABBITMQ_PORT:5671}
-    username: ${RABBITMQ_USER:guest}
-    password: ${RABBITMQ_PASSWORD:guest}
+    username: ${RABBITMQ_USER}
+    password: ${RABBITMQ_PASSWORD}
     ssl:
-      enabled: ${RABBITMQ_SSL:false}
+      enabled: ${RABBITMQ_SSL:true}
 
 server:
   port: 8082
-
-eureka:
-  client:
-    service-url:
-      defaultZone: ${EUREKA_SERVER_URL:http://localhost:8761/eureka/}
-    instance:
-      prefer-ip-address: true
 
 rabbitmq:
   exchange:

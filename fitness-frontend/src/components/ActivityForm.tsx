@@ -26,7 +26,11 @@ const ActivityForm: React.FC<ActivityFormProps> = ({ onActivitiesAdded }) => {
     event.preventDefault();
 
     try {
-      await addActivity(activity);
+      await addActivity({
+        ...activity,
+        duration: Number(activity.duration),
+        caloriesBurned: Number(activity.caloriesBurned),
+      });
       onActivitiesAdded(); // ✅ correct callback
       setActivity({
         duration: "",

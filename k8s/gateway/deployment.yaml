@@ -1,0 +1,57 @@
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: api-gateway
+  namespace: fitx
+
+spec:
+  replicas: 1
+
+  selector:
+    matchLabels:
+      app: api-gateway
+
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+
+  template:
+    metadata:
+      labels:
+        app: api-gateway
+
+    spec:
+      containers:
+        - name: api-gateway
+
+          image: 020641930163.dkr.ecr.ap-south-1.amazonaws.com/fitx/gateway:v5
+          imagePullPolicy: Always
+
+          ports:
+            - name: http
+              containerPort: 8089
+
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: "docker"
+
+            - name: CONFIG_SERVER_URL
+              value: "http://configserver:8888"
+
+            - name: KEYCLOAK_JWK_URI
+              value: "http://keycloak:8080/realms/fitness-oauth2/protocol/openid-connect/certs"
+
+            - name: EUREKA_CLIENT_ENABLED
+              value: "false"
+
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+
+            limits:
+              cpu: 500m
+              memory: 512Mi

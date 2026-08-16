@@ -27,9 +27,10 @@ const ActivitiesPage = () => {
 };
 
 function App() {
-  const { token, tokenData, logIn, logOut } = useContext(AuthContext);
+  const { token, tokenData, logIn } = useContext(AuthContext);
   const dispatch = useDispatch();
   const [authReady, setAuthReady] = useState<boolean>(false);
+  console.log(authReady);
 
   useEffect(() => {
     if (token && tokenData) {
