@@ -2,11 +2,12 @@ pipeline {
     agent any
 
     environment {
-        AWS_REGION       = "ap-south-1"
-        ECR_REGISTRY     = "020641930163.dkr.ecr.ap-south-1.amazonaws.com"
-        SERVICE_NAME     = "activityservice"
-        IMAGE_NAME       = "${ECR_REGISTRY}/fitx/${SERVICE_NAME}"
+        SERVICE_NAME = "activityservice"
+        IMAGE_NAME = "020641930163.dkr.ecr.ap-south-1.amazonaws.com/fitx/activityservice"
         SONAR_PROJECT_KEY = "fitx-activityservice"
+        K8S_MANIFEST = "k8s/activityservice/deployment.yaml"
+        AWS_REGION = "ap-south-1"
+        ECR_REGISTRY = "020641930163.dkr.ecr.ap-south-1.amazonaws.com"
     }
 
     stages {
@@ -61,15 +62,18 @@ pipeline {
         stage('Push Docker Image') {
             steps {
                 sh '''
-                    echo "Logging into Amazon ECR..."
+                    set -e
+
+                    echo "Logging into ECR..."
 
                     aws ecr get-login-password \
                       --region ${AWS_REGION} | \
                     docker login \
                       --username AWS \
-                      --password-stdin ${ECR_REGISTRY}
+                      --password-stdin \
+                      ${ECR_REGISTRY}
 
-                    echo "Pushing image: ${IMAGE_NAME}:${BUILD_NUMBER}"
+                    echo "Pushing ${IMAGE_NAME}:${BUILD_NUMBER}..."
 
                     docker push \
                       ${IMAGE_NAME}:${BUILD_NUMBER}
@@ -80,13 +84,69 @@ pipeline {
                       ${IMAGE_NAME}:${BUILD_NUMBER} \
                       ${IMAGE_NAME}:latest
 
-                    echo "Pushing latest tag..."
+                    echo "Pushing latest..."
 
                     docker push \
                       ${IMAGE_NAME}:latest
 
                     docker logout ${ECR_REGISTRY}
                 '''
+            }
+        }
+
+        stage('Update GitOps Manifest') {
+            steps {
+                sh '''
+                    set -e
+
+                    echo "Updating GitOps manifest..."
+
+                    echo "Before:"
+                    grep "image:" ${K8S_MANIFEST}
+
+                    sed -i \
+                      "s|image: ${IMAGE_NAME}:.*|image: ${IMAGE_NAME}:${BUILD_NUMBER}|" \
+                      ${K8S_MANIFEST}
+
+                    echo "After:"
+                    grep "image:" ${K8S_MANIFEST}
+                '''
+            }
+        }
+
+        stage('Commit and Push GitOps Change') {
+            steps {
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: 'github-fitx',
+                        usernameVariable: 'GIT_USERNAME',
+                        passwordVariable: 'GIT_PASSWORD'
+                    )
+                ]) {
+                    sh '''
+                        set -e
+
+                        git config user.name "Jenkins"
+                        git config user.email "jenkins@fitx.local"
+
+                        git add ${K8S_MANIFEST}
+
+                        if git diff --cached --quiet; then
+                            echo "No GitOps changes detected."
+                            exit 0
+                        fi
+
+                        echo "Git changes:"
+                        git diff --cached -- ${K8S_MANIFEST}
+
+                        git commit \
+                          -m "chore: deploy ${SERVICE_NAME}:${BUILD_NUMBER}"
+
+                        git push \
+                          https://${GIT_USERNAME}:${GIT_PASSWORD}@github.com/SagarJadhav007/Fitness-Microservices.git \
+                          HEAD:master
+                    '''
+                }
             }
         }
     }
@@ -98,14 +158,21 @@ pipeline {
                 testResults: 'activityservice/target/surefire-reports/*.xml',
                 allowEmptyResults: true
             )
+
+            sh '''
+                docker image rm \
+                  ${IMAGE_NAME}:${BUILD_NUMBER} \
+                  ${IMAGE_NAME}:latest \
+                  2>/dev/null || true
+            '''
         }
 
         success {
-            echo 'FitX Activity Service CI pipeline completed successfully!'
+            echo 'FitX Activity Service CI/CD pipeline completed successfully!'
         }
 
         failure {
-            echo 'FitX Activity Service CI pipeline failed.'
+            echo 'FitX Activity Service CI/CD pipeline failed.'
         }
     }
 }
