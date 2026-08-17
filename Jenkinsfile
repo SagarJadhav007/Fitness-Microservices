@@ -2,8 +2,10 @@ pipeline {
     agent any
 
     environment {
-        SERVICE_NAME = "activityservice"
-        IMAGE_NAME = "sagarjadhav007/fitx-activityservice"
+        AWS_REGION       = "ap-south-1"
+        ECR_REGISTRY     = "020641930163.dkr.ecr.ap-south-1.amazonaws.com"
+        SERVICE_NAME     = "activityservice"
+        IMAGE_NAME       = "${ECR_REGISTRY}/fitx/${SERVICE_NAME}"
         SONAR_PROJECT_KEY = "fitx-activityservice"
     }
 
@@ -27,7 +29,10 @@ pipeline {
             steps {
                 dir('activityservice') {
                     withSonarQubeEnv('SonarQube') {
-                        sh './mvnw sonar:sonar -Dsonar.projectKey=$SONAR_PROJECT_KEY'
+                        sh '''
+                            ./mvnw sonar:sonar \
+                              -Dsonar.projectKey=${SONAR_PROJECT_KEY}
+                        '''
                     }
                 }
             }
@@ -55,38 +60,43 @@ pipeline {
 
         stage('Push Docker Image') {
             steps {
-                withCredentials([
-                    usernamePassword(
-                        credentialsId: 'dockerhub-fitx',
-                        usernameVariable: 'DOCKER_USERNAME',
-                        passwordVariable: 'DOCKER_PASSWORD'
-                    )
-                ]) {
-                    sh '''
-                        echo "$DOCKER_PASSWORD" | docker login \
-                          -u "$DOCKER_USERNAME" \
-                          --password-stdin
+                sh '''
+                    echo "Logging into Amazon ECR..."
 
-                        docker push ${IMAGE_NAME}:${BUILD_NUMBER}
+                    aws ecr get-login-password \
+                      --region ${AWS_REGION} | \
+                    docker login \
+                      --username AWS \
+                      --password-stdin ${ECR_REGISTRY}
 
-                        docker tag \
-                          ${IMAGE_NAME}:${BUILD_NUMBER} \
-                          ${IMAGE_NAME}:latest
+                    echo "Pushing image: ${IMAGE_NAME}:${BUILD_NUMBER}"
 
-                        docker push ${IMAGE_NAME}:latest
+                    docker push \
+                      ${IMAGE_NAME}:${BUILD_NUMBER}
 
-                        docker logout
-                    '''
-                }
+                    echo "Tagging image as latest..."
+
+                    docker tag \
+                      ${IMAGE_NAME}:${BUILD_NUMBER} \
+                      ${IMAGE_NAME}:latest
+
+                    echo "Pushing latest tag..."
+
+                    docker push \
+                      ${IMAGE_NAME}:latest
+
+                    docker logout ${ECR_REGISTRY}
+                '''
             }
         }
     }
 
     post {
+
         always {
             junit(
-               testResults: 'activityservice/target/surefire-reports/*.xml',
-               allowEmptyResults: true
+                testResults: 'activityservice/target/surefire-reports/*.xml',
+                allowEmptyResults: true
             )
         }
 
