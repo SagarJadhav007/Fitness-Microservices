@@ -18,6 +18,66 @@ pipeline {
             }
         }
 
+        stage('Detect Changed Services') {
+            steps {
+                script {
+                    def changedFiles = sh(
+                        script: '''
+                            git diff --name-only HEAD~1 HEAD
+                        ''',
+                        returnStdout: true
+                    ).trim()
+
+                    echo "========================================"
+                    echo "Changed Files"
+                    echo "========================================"
+
+                    if (changedFiles) {
+                        echo changedFiles
+                    } else {
+                        echo "No changed files detected."
+                    }
+
+                    def services = [
+                        'activityservice',
+                        'aiservice',
+                        'analyticsservice',
+                        'configserver',
+                        'gateway',
+                        'userservice'
+                    ]
+
+                    def changedServices = []
+
+                    if (changedFiles) {
+                        def files = changedFiles.split('\n')
+
+                        changedServices = services.findAll { service ->
+                            files.any { file ->
+                                file.startsWith("${service}/")
+                            }
+                        }
+                    }
+
+                    echo "========================================"
+                    echo "Changed Services"
+                    echo "========================================"
+
+                    if (changedServices.isEmpty()) {
+                        echo "No microservice source changes detected."
+                    } else {
+                        changedServices.each { service ->
+                            echo " - ${service}"
+                        }
+                    }
+
+                    env.CHANGED_SERVICES = changedServices.join(',')
+
+                    echo "CHANGED_SERVICES=${env.CHANGED_SERVICES}"
+                }
+            }
+        }
+
         stage('Test') {
             steps {
                 dir('activityservice') {
