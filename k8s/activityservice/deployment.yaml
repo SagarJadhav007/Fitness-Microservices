@@ -19,7 +19,7 @@ spec:
     spec:
       containers:
         - name: activityservice
-          image: 020641930163.dkr.ecr.ap-south-1.amazonaws.com/fitx/activityservice:73
+          image: 020641930163.dkr.ecr.ap-south-1.amazonaws.com/fitx/activityservice:74
 
           ports:
             - containerPort: 8082
